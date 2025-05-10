@@ -9,7 +9,7 @@ exports.createAddress = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// new function
+
 exports.getAddresses = async (req, res) => {
   try {
     const addresses = await addressService.getAddresses(req.user.id);
