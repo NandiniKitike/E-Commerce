@@ -1,47 +1,72 @@
 const addressService = require("../services/addressService");
 
-// Create a new address
-exports.createAddress = async (req, res) => {
+// Get all addresses for the logged-in user
+exports.getUserAddresses = async (req, res) => {
   try {
-    const address = await addressService.createAddress(req.user.id, req.body);
-    res.status(201).json(address);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.getAddresses = async (req, res) => {
-  try {
-    const addresses = await addressService.getAddresses(req.user.id);
+    const addresses = await addressService.getUserAddresses(req.user.id);
     res.status(200).json(addresses);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in getUserAddresses:", error.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Update an address
+// Get address by ID
+exports.getAddressById = async (req, res) => {
+  try {
+    const address = await addressService.getAddressById(req.user.id);
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+    res.status(200).json(address);
+  } catch (error) {
+    console.error("Error in getAddressById:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Create new address
+exports.createAddress = async (req, res) => {
+  try {
+    const addressData = { ...req.body, user_id: req.user.id };
+    const address = await addressService.createAddress(addressData);
+    res.status(201).json({ message: "Address created successfully", address });
+  } catch (error) {
+    console.error("Error in createAddress:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Update address
 exports.updateAddress = async (req, res) => {
   try {
     const updatedAddress = await addressService.updateAddress(
-      req.user.id,
       req.params.id,
       req.body
     );
-    res.status(200).json(updatedAddress);
+    if (!updatedAddress) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+    res.status(200).json({
+      message: "Address updated successfully",
+      address: updatedAddress,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in updateAddress:", error.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Delete an address
+// Delete address
 exports.deleteAddress = async (req, res) => {
   try {
-    const result = await addressService.deleteAddress(
-      req.user._id,
-      req.params.id
-    );
-    res.status(200).json(result);
+    const deleted = await addressService.deleteAddress(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+    res.status(200).json({ message: "Address deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in deleteAddress:", error.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

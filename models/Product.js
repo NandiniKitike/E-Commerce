@@ -1,42 +1,53 @@
+// const mongoose = require("mongoose");
+
+// const productSchema = new mongoose.Schema(
+//   {
+//     name: { type: String, required: true },
+//     description: { type: String, required: true },
+//     price: { type: Number, required: true },
+//     stock_quantity: { type: Number, default: 0 },
+//     category_id: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "Category",
+//       required: true,
+//     },
+//     created_by: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "Admin",
+//       required: true,
+//     },
+//     is_active: { type: Boolean, default: true },
+//     images: [{ type: String }], // <-- changed from single image to array
+//   },
+//   { timestamps: true }
+// );
+
+// module.exports = mongoose.model("Product", productSchema);
+// models/product.js
 const mongoose = require("mongoose");
+
 const productSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    price: { type: Number, required: true },
+    stock_quantity: { type: Number, default: 0 },
+    category_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: true,
-      trim: true,
     },
-    description: {
-      type: String,
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
       required: true,
-      trim: true,
     },
-    price: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    category: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    quantity: {
-      type: Number,
-
-      min: 1,
-    },
-    stock: {
-      type: Number,
-
-      min: 0,
-    },
-    imageUrl: {
-      type: String,
-      default: "",
-    },
+    is_active: { type: Boolean, default: true },
+    images: [{ type: String }],
   },
-  { timeStamps: true }
+  { timestamps: true }
 );
-const product = mongoose.model("Product", productSchema);
-module.exports = product;
+
+// ✅ Prevent model overwrite error
+module.exports =
+  mongoose.models.Product || mongoose.model("Product", productSchema);

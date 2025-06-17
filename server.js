@@ -1,41 +1,51 @@
-// Import necessary modules
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-const connectDB = require("./config/db.js"); // Make sure you have a file to connect to your DB
+const connectCloudinary = require("./config/cloudinary.js");
+const connectDB = require("./config/db.js");
 const dotenv = require("dotenv");
-dotenv.config(); // Load environment variables from .env file
-
+dotenv.config();
 const express = require("express");
-const app = express();
-const PORT = process.env.PORT || 5000; // Use PORT from .env or default to 5000
-
-// Middleware to parse incoming JSON requests
-app.use(express.json());
+const cookieParser = require("cookie-parser"); // Import cookie-parser
 const cors = require("cors");
-app.use(cors());
 
-// Connect to MongoDB
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(express.json());
+
+// Add cookie-parser middleware to parse cookies
+app.use(cookieParser());
+
+// Configure CORS with credentials support
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 connectDB();
+// connectCloudinary();
 
-// Import Routes
-const adminRoutes = require("./routes/adminRoutes");
-const userRoutes = require("./routes/userRoutes");
-const productRoutes = require("./routes/productRoutes");
-const favoriteRoutes = require("./routes/favoriteRoutes");
+const userRoutes = require("./routes/userRoute.js");
+const categoryRoutes = require("./routes/categoryRoutes.js");
+const productRoutes = require("./routes/productRoutes.js");
+const addressRoutes = require("./routes/addressRoutes.js");
 const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const favoriteRoutes = require("./routes/favoriteRoutes");
+const paymentRoutes = require("./routes/paymentRoutes"); // Fixed typo here
 
-const addressRoutes = require("./routes/addressRoutes");
-
-// Use Routes
-app.use("/api/admin", adminRoutes); // Add the correct route prefix
-app.use("/api/user", userRoutes);
-app.use("/api/product", productRoutes);
-app.use("/api/favorite", favoriteRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/order", orderRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/products", productRoutes);
 app.use("/api/address", addressRoutes);
-// Start the server
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/favorites", favoriteRoutes);
+app.use("/api/payments", paymentRoutes); // Fixed typo here
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

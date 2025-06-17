@@ -1,33 +1,64 @@
 const express = require("express");
+const productController = require("../controllers/productController");
 const router = express.Router();
-const productController = require("../controllers/productController"); // Fixed import path
-const authMiddleware = require("../middlewares/authMiddleware");
-const roleMiddleware = require("../middlewares/roleMiddleware");
+const multer = require("multer");
 
-// Public Routes
-router.get("/", productController.getAllProducts); // Public: Get all products
-router.get("/Byid/:id", productController.getProductById); // Public: Get a product by ID
+const storage = multer.memoryStorage(); // buffer instead of disk
+const upload = multer({ storage });
 
-// Admin Routes
+const authMiddleware = require("../Middleware/authMiddleware");
+const roleMiddleware = require("../Middleware/roleMiddleware");
+// Public routes
+router.get("/getAllProducts", productController.getAllProducts);
+router.get("/getProduct/:id", productController.getProductById);
+// router.get("/check-stock/:productId", productController.getStockStatus);
+// router.put("/update-stock/:id", productController.changeStockQuantity);
+router.put("/toggle-stock/:id", productController.toggleInStockStatus);
+router.get("/category/:categoryId", productController.getProductsByCategory);
+
+// Admin-only routes
+// router.post(
+//   "/createProduct",
+//   authMiddleware,
+//   roleMiddleware(["admin"]),
+//   upload.array("images"),
+//   productController.createProduct
+// );
+
+router.post("/createProduct", authMiddleware, productController.createProduct);
+
+//ulpad image
 router.post(
-  "/createProduct",
-  authMiddleware,
-  roleMiddleware("admin"),
-  productController.createProduct // Admin: Create a new product
+  "/upload-image",
+  upload.array("files", 4),
+  productController.uploadImage
 );
 
 router.put(
-  "/update/:id",
+  "/updateProduct/:id",
   authMiddleware,
-  roleMiddleware("admin"),
-  productController.updateProduct // Admin: Update an existing product (fixed typo)
+  roleMiddleware(["admin"]),
+  productController.updateProductById
+);
+router.delete(
+  "/delProduct/:id",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  productController.deleteProductById
 );
 
-router.delete(
-  "/delete/:id",
+// Product images management (admin only)
+router.post(
+  "/:id/images",
   authMiddleware,
-  roleMiddleware("admin"),
-  productController.deleteProduct // Admin: Delete a product
+  roleMiddleware(["admin"]),
+  productController.uploadProductImage
+);
+router.delete(
+  "/:id/images/:imageId",
+  authMiddleware,
+  roleMiddleware(["admin"]),
+  productController.deleteProductImage
 );
 
 module.exports = router;

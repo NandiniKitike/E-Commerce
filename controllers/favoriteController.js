@@ -1,31 +1,43 @@
 const favoriteService = require("../services/favoriteService");
+
+// Add to favorites
 exports.addFavorite = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { productId } = req.body;
-    const userId = req.user.id;
-    const result = await favoriteService.addFavorite(userId, productId);
-    res.status(result.status).json(result);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
-exports.removeFromFavorites = async (req, res) => {
-  try {
-    const { productId } = req.query;
-    const userId = req.user.id;
-    const result = await favoriteService.removeFromFavorites(userId, productId);
-    res.status(result.status).json(result);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+
+    if (!productId) {
+      return res.status(400).json({ message: "Product ID is required" });
+    }
+
+    const favorite = await favoriteService.addFavorite(userId, productId);
+    res.status(201).json({ message: "Product added to favorites", favorite });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };
 
+// Get all favorites
 exports.getFavorites = async (req, res) => {
   try {
     const userId = req.user.id;
-    const result = await favoriteService.getFavorites(userId);
-    res.status(result.status).json(result);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    const favorites = await favoriteService.getFavorites(userId);
+
+    res.json({ favorites });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Remove from favorites
+exports.removeFavorite = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { productId } = req.params;
+
+    const result = await favoriteService.removeFavorite(userId, productId);
+    res.json({ message: "Product removed from favorites", favorite: result });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };

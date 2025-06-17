@@ -1,67 +1,101 @@
-const cartService = require("../services//cartService");
-//add product in cart
-exports.addToCart = async (req, res) => {
-  const { productId, quantity } = req.body;
-  const userId = req.user.id; // Get user ID from the authenticated user
+const cartService = require("../services/cartService");
+async function getCart(req, res) {
+  try {
+    const userId = req.user.id;
+    const cart = await cartService.getCartByUserId(req, res);
+    return res.status(200).json({ success: true, cart });
+  } catch (error) {
+    console.error("Get Cart Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
 
+async function updateCartItem(req, res) {
   try {
-    const result = await cartService.addToCart(userId, productId, quantity);
-    return res.status(result.status).json({
-      message: result.message,
-      data: result.data,
-    });
-  } catch (error) {
-    console.error("Add to Cart Error:", error.message);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
-//get user cart
-exports.getCart = async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const result = await cartService.getCart(userId);
-    return res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-};
-//update item quantity
-exports.updateCart = async (req, res) => {
-  const { userId, productId, quantity } = req.body;
-  try {
-    const result = await cartService.updateCartItem(
+    const userId = req.user?.id;
+    const { product_id, quantity } = req.body;
+
+    if (!product_id || typeof quantity !== "number") {
+      return res.status(400).json({ success: false, message: "Invalid input" });
+    }
+
+    const cart = await cartService.updateItemQuantity(
       userId,
-      productId,
+      product_id,
       quantity
     );
-    return res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
+    res.status(200).json({ success: true, cart });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "internal server error", error: error.message });
+    console.error("Update Cart Item Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+async function removeCartItem(req, res) {
+  try {
+    const userId = req.user.id;
+    const { productId } = req.params;
+
+    if (!productId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Product ID required" });
+    }
+
+    const cart = await cartService.removeItemFromCart(userId, productId);
+    res.status(200).json({ success: true, cart });
+  } catch (error) {
+    console.error("Remove Cart Item Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+async function clearCart(req, res) {
+  try {
+    const userId = req.user.id;
+    const cart = await cartService.clearUserCart(userId);
+    res.status(200).json({ success: true, cart });
+  } catch (error) {
+    console.error("Clear Cart Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+async function getCartItemCount(req, res) {
+  try {
+    const userId = req.user.id;
+    const count = await cartService.getCartItemCount(userId);
+    res.status(200).json({ success: true, count });
+  } catch (error) {
+    console.error("Get Cart Count Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+// <--- Move addToCart here before export
+const addToCart = async (req, res) => {
+  try {
+    const userId = req.user.id; // From authMiddleware
+    const { items } = req.body; // Expecting array of { product_id, quantity }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Items array is required" });
+    }
+
+    const updatedCart = await cartService.addItemsToCart(userId, items);
+
+    return res.status(200).json({ success: true, cart: updatedCart });
+  } catch (error) {
+    console.error("Add to cart error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-//remove item from the cart
-exports.removeCartItem = async (req, res) => {
-  const { productId } = req.body;
-  const userId = req.userId;
-  try {
-    const result = await cartService.removeCartItem(userId, productId);
-    res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "internal server error", error: error.message });
-  }
+module.exports = {
+  getCart,
+  updateCartItem,
+  removeCartItem,
+  clearCart,
+  getCartItemCount,
+  addToCart,
 };

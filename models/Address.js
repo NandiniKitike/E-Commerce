@@ -2,25 +2,18 @@ const mongoose = require("mongoose");
 
 const addressSchema = new mongoose.Schema(
   {
-    user: {
+    user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    fullName: {
+    address_line1: {
       type: String,
       required: true,
     },
-    phoneNumber: {
+    address_line2: {
       type: String,
-      required: true,
-    },
-    addressLine1: {
-      type: String,
-      required: true,
-    },
-    addressLine2: {
-      type: String,
+      default: "",
     },
     city: {
       type: String,
@@ -30,16 +23,15 @@ const addressSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    postalCode: {
+    postal_code: {
       type: String,
       required: true,
     },
     country: {
       type: String,
       required: true,
-      default: "India",
     },
-    isDefault: {
+    is_default: {
       type: Boolean,
       default: false,
     },

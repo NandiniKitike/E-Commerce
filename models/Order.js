@@ -1,47 +1,40 @@
-// module.exports = Order;
+const express = require("express");
 const mongoose = require("mongoose");
+const router = express.Router();
+
+const orderItemSchema = new mongoose.Schema({
+  product_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true }, // capture at time of order
+});
 
 const orderSchema = new mongoose.Schema(
   {
-    user: {
+    user_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the User model
-      required: true, // Ensure that the user field is required
+      ref: "User",
+      required: true,
     },
-    items: [
-      {
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-        },
-        price: {
-          type: Number,
-          required: true,
-        },
-      },
-    ],
-    address: {
+    address_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Address",
+      required: true,
+    },
+    total_amount: { type: Number, required: true },
+    payment_method: {
       type: String,
       required: true,
+      enum: ["cod", "card", "upi", "netbanking"],
     },
-    paymentMethod: {
-      type: String,
-      enum: ["cash", "card", "online"],
-      required: true,
-    },
-    totalAmount: {
-      type: Number,
-      required: true,
-    },
+    orderItems: [orderItemSchema],
     status: {
       type: String,
-      enum: ["pending", "processing", "completed", "cancelled"],
       default: "pending",
+      enum: ["pending", "confirmed", "shipped", "delivered", "cancelled"],
     },
   },
   { timestamps: true }

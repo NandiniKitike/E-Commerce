@@ -1,107 +1,121 @@
 const orderService = require("../services/orderService");
+const Order = require("../models/Order");
 
-// Place order
 exports.placeOrder = async (req, res) => {
-  const { userId, address, paymentMethod } = req.body;
-
-  if (!userId || !address || !paymentMethod) {
-    return res
-      .status(400)
-      .json({ message: "User ID, address, and payment method are required" });
-  }
-
   try {
-    const result = await orderService.placeOrder(
-      userId,
-      address,
-      paymentMethod
-    );
-    return res.status(result.status).json(result);
-  } catch (error) {
-    console.error("Order Placement Controller Error:", error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-};
-// Get all orders of a specific user
-exports.getUserOrders = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const result = await orderService.getUserOrders(userId);
-    return res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
+    const order = await orderService.createOrder(req);
+    res.status(201).json({ message: "Order placed", order });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    console.error("Order Error:", err.message);
+    res.status(400).json({ error: err.message });
+  }
+};
+exports.createRazorpayOrder = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    const options = {
+      amount: amount * 100, // amount in paisa
+      currency: "INR",
+      receipt: `receipt_order_${Math.floor(Math.random() * 10000)}`,
+    };
+
+    const response = await razorpay.orders.create(options);
+
+    res.status(200).json({
+      success: true,
+      order_id: response.id,
+      currency: response.currency,
+      amount: response.amount,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Razorpay order creation failed",
+      error: err.message,
+    });
+  }
+};
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await orderService.getUserOrders(req.user.id);
+    res.status(200).json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
-// Get a specific order by ID
+// Get single order by ID (user or admin)
 exports.getOrderById = async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const result = await orderService.getOrderById(orderId);
-    return res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
+    const userId = req.user.id;
+
+    const orders = await orderService.getOrdersByUserId(userId);
+
+    res.status(200).json({
+      success: true,
+      message: "Orders fetched successfully",
+      order: orders,
+    });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
   }
 };
 
-// Update order status
+// Update order status (admin only)
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const { status } = req.body;
-    const result = await orderService.updateOrderStatus(orderId, status);
-    return res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
+    // if (req.user.role !== "admin") {
+    //   return res.status(403).json({ error: "Unauthorized" });
+    // }
+
+    const updated = await orderService.updateOrderStatus(
+      req.params.id,
+      req.body.status
+    );
+    res.status(200).json({ message: "Order status updated", updated });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(400).json({ error: err.message });
   }
 };
 
-// ancel a specific order
+// Cancel order (user only, if not shipped)
 exports.cancelOrder = async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const result = await orderService.cancelOrder(orderId);
-    return res
-      .status(result.status)
-      .json({ message: result.message, data: result.data });
+    const result = await orderService.cancelOrder(
+      req.params.id,
+      req.user._id,
+      req.user.role
+    );
+    res.status(200).json({ message: "Order cancelled", result });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(400).json({ error: err.message });
   }
 };
-exports.updateShippingAddress = async (req, res) => {
-  try {
-    const orderId = req.params.id;
-    const newAddress = req.body.address;
 
-    const response = await orderService.updateShippingAddress(
-      orderId,
-      newAddress
-    );
-    return res.status(response.status).json(response);
+// Track order (user or admin)
+exports.trackOrder = async (req, res) => {
+  try {
+    const status = await orderService.trackOrderStatus(req.params.id, req.user);
+    res.status(200).json({ status });
   } catch (err) {
-    console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    res.status(404).json({ error: err.message });
+  }
+};
+
+// Admin: get all orders
+exports.getAllOrders = async (req, res) => {
+  try {
+    // if (req.user.role !== "admin") {
+    //   return res.status(403).json({ error: "Unauthorized" });
+    // }
+
+    const orders = await orderService.getAllOrders();
+    res.status(200).json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

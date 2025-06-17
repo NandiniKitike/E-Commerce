@@ -1,151 +1,161 @@
+const mongoose = require("mongoose");
+const Product = require("../models/product");
 const Order = require("../models/Order");
-const Cart = require("../models/Cart");
+const User = require("../models/User");
+const Address = require("../models/Address");
 
-exports.placeOrder = async (userId, address, paymentMethod) => {
+exports.createOrder = async (req) => {
   try {
-    const cart = await Cart.findOne({ userId }).populate("items.product");
+    const { address_id, items, payment_method } = req.body;
+    const user_id = req.user?.id;
 
-    if (!cart || cart.items.length === 0) {
-      return { status: 400, message: "Cart is empty" };
+    if (!user_id) throw new Error("Unauthorized: User not found");
+
+    if (
+      !address_id ||
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      !payment_method
+    ) {
+      throw new Error("Missing required fields");
     }
 
-    let totalAmount = 0;
+    if (!mongoose.Types.ObjectId.isValid(address_id)) {
+      throw new Error("Invalid address ID format");
+    }
 
-    // Calculate total amount and validate product existence
-    const orderItems = cart.items.map((item) => {
-      if (!item.product) {
-        throw new Error("Invalid product in cart");
+    const address = await Address.findById(address_id);
+    if (!address) throw new Error("Invalid address");
+
+    let totalAmount = 0;
+    const orderItems = [];
+
+    for (const item of items) {
+      if (!mongoose.Types.ObjectId.isValid(item.product_id)) {
+        throw new Error("Invalid product ID format");
       }
 
-      totalAmount += item.product.price * item.quantity;
+      const product = await Product.findById(item.product_id);
+      if (!product || !product.is_active) {
+        throw new Error(`Invalid or inactive product`);
+      }
 
-      return {
-        product: item.product._id,
-        quantity: item.quantity,
-        price: item.product.price,
-      };
-    });
+      if (item.quantity > product.stock_quantity) {
+        throw new Error(`Not enough stock for ${product.name}`);
+      }
 
-    // Create order
-    const order = new Order({
-      userId,
-      address,
-      paymentMethod,
-      items: orderItems,
-      totalAmount,
+      const price = product.price;
+      const quantity = item.quantity;
+      totalAmount += price * quantity;
+
+      orderItems.push({
+        product_id: product._id,
+        quantity,
+        price: Number(price),
+      });
+
+      // Update stock
+      product.stock_quantity -= quantity;
+      await product.save();
+    }
+
+    const newOrder = await Order.create({
+      user_id,
+      address_id,
+      total_amount: Number(totalAmount),
+      payment_method,
+      orderItems,
       status: "pending",
     });
 
-    await order.save();
-
-    // Clear the cart after placing the order
-    await Cart.findOneAndUpdate({ userId }, { $set: { items: [] } });
-
-    return {
-      status: 200,
-      message: "Order placed successfully",
-      data: order,
-    };
+    return newOrder;
   } catch (error) {
-    console.error("Order Service Error:", error.message);
-    return {
-      status: 500,
-      message: "Internal server error",
-      error: error.message,
-    };
+    throw new Error(error.message || "Order creation failed");
   }
 };
-// Get all orders for a user
 exports.getUserOrders = async (userId) => {
   try {
-    const orders = await Order.find({ userId })
-      .populate("items.product")
-      .select();
-    if (!orders.length) {
-      return { status: 404, message: "No orders found" };
-    }
+    const orders = await Order.find({ user_id: userId })
+      .sort({ createdAt: -1 })
+      .populate("orderItems.product_id")
+      .populate("address_id");
 
-    return {
-      status: 200,
-      message: "Orders fetched successfully",
-      data: orders,
-    };
-  } catch (err) {
-    console.error(err);
-    return { status: 500, message: "Server error", error: err.message };
+    return orders;
+  } catch (error) {
+    console.log(error);
   }
 };
 
-// Get a specific order by ID
-exports.getOrderById = async (orderId) => {
+// exports.getOrderById = async (orderId) => {
+//   console.log(orderId);
+//   const order = await Order.findById(orderId)
+//     .populate("orderItems.product_id")
+//     .populate("address_id");
+
+//   if (!order) throw new Error("Order not found");
+//   // if (user.role !== "admin" && String(order.user_id) !== String(user._id)) {
+//   //   throw new Error("Unauthorized to view this order");
+//   // }
+
+//   return order;
+// };
+
+exports.getOrdersByUserId = async (userId) => {
   try {
-    const order = await Order.findById(orderId).populate("items.product");
-    if (!order) {
-      return { status: 404, message: "Order not found" };
+    const orders = await Order.find({ user_id: userId })
+      .populate("orderItems.product_id")
+      .populate("address_id");
+
+    if (!orders || orders.length === 0) {
+      throw new Error("No orders found for this user");
     }
 
-    return { status: 200, message: "Order fetched successfully", data: order };
-  } catch (err) {
-    console.error(err);
-    return { status: 500, message: "Server error", error: err.message };
+    return orders;
+  } catch (error) {
+    console.error("Error fetching orders:", error.message);
+    throw error;
   }
 };
 
-// Update order status
 exports.updateOrderStatus = async (orderId, status) => {
-  const validStatuses = ["pending", "processing", "completed", "cancelled"];
-  if (!validStatuses.includes(status)) {
-    return { status: 400, message: "Invalid status" };
-  }
+  const order = await Order.findById(orderId);
+  if (!order) throw new Error("Order not found");
 
-  try {
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return { status: 404, message: "Order not found" };
-    }
+  order.status = status;
+  await order.save();
 
-    order.status = status;
-    await order.save();
-
-    return { status: 200, message: "Order status updated", data: order };
-  } catch (err) {
-    console.error(err);
-    return { status: 500, message: "Server error", error: err.message };
-  }
+  return order;
 };
 
-// Cancel an order
+exports.cancelOrder = async (orderId, userId, role) => {
+  const order = await Order.findById(orderId);
+  if (!order) throw new Error("Order not found");
 
-// Cancel an order
-exports.cancelOrder = async (orderId) => {
-  try {
-    const order = await Order.findById(orderId);
+  const isUser = String(order.user_id) === String(userId);
+  // if (role !== "admin" && !isUser) throw new Error("Unauthorized");
 
-    if (!order) {
-      return { status: 404, message: "Order not found" };
-    }
-
-    console.log("Order before cancellation:", JSON.stringify(order, null, 2));
-
-    if (order.status === "completed") {
-      return { status: 400, message: "Completed orders cannot be cancelled" };
-    }
-
-    order.items = [];
-    order.status = "cancelled";
-    order.totalAmount = 0;
-
-    await order.save();
-
-    console.log("Order after cancellation:", JSON.stringify(order, null, 2));
-
-    return {
-      status: 200,
-      message: "Order cancelled successfully",
-      data: order,
-    };
-  } catch (err) {
-    console.error("Error during order cancellation:", err);
-    return { status: 500, message: "Server error", error: err.message };
+  if (["shipped", "delivered"].includes(order.status)) {
+    throw new Error("Cannot cancel shipped/delivered order");
   }
+
+  order.status = "cancelled";
+  return await order.save();
+};
+
+exports.trackOrderStatus = async (orderId, user) => {
+  const order = await Order.findById(orderId);
+  if (!order) throw new Error("Order not found");
+
+  const isUser = String(order.user_id) === String(user._id);
+  // if (user.role !== "admin" && !isUser) throw new Error("Unauthorized");
+
+  return order.status;
+};
+
+exports.getAllOrders = async () => {
+  return await Order.find({})
+    .sort({ createdAt: -1 })
+    .populate("user_id")
+    .populate("orderItems.product_id")
+    .populate("address_id");
 };

@@ -1,103 +1,114 @@
 const Cart = require("../models/Cart");
-const Product = require("../models/Product");
-const mongoose = require("mongoose");
-// Add or update product in cart
 
-exports.addToCart = async (userId, productId, quantity) => {
-  if (quantity <= 0) {
-    return { status: 400, message: "Quantity must be a positive number" };
-  }
+// Get Cart
 
+const getCartByUserId = async (req, res) => {
   try {
-    // Check if the product exists
-    const product = await Product.findById(productId);
-    if (!product) {
-      return { status: 404, message: "Product not found" };
-    }
-
-    // Check if there's enough stock
-    if (product.stock < quantity) {
-      return { status: 400, message: "Not enough stock available" };
-    }
-
-    // Find or create a cart for the user
-    let cart = await Cart.findOne({ userId });
-
-    if (!cart) {
-      cart = new Cart({
-        userId,
-        items: [{ product: productId, quantity, price: product.price }],
-      });
-    } else {
-      const itemIndex = cart.items.findIndex(
-        (item) => item.product.toString() === productId
-      );
-
-      if (itemIndex > -1) {
-        // Update existing item quantity
-        cart.items[itemIndex].quantity += quantity;
-      } else {
-        // Add new item to the cart
-        cart.items.push({ product: productId, quantity, price: product.price });
-      }
-    }
-
-    // Save the cart and handle database issues
-    await cart.save();
-
-    // Populate the product details for each item in the cart
-    await cart.populate({
-      path: "items.product",
-      select: "name price imageUrl", // Include the necessary fields
-    });
-
-    // Return success response with updated cart
-    return { status: 200, message: "Item added to cart", data: cart };
+    const userId = req.user?.id; // should be set by authMiddleware
+    const cart = await Cart.find({
+      user_id: userId,
+    }).populate("items.product_id");
+    return res.status(200).json({ success: true, cart });
   } catch (error) {
-    // Log full error stack for debugging
-    console.error("Cart Save Error:", error.stack);
-
-    return {
-      status: 500,
-      message: "Internal server error",
-      error: error.message,
-    };
+    console.error("Get Cart Error:", error);
+    return res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-// Get user cart
-exports.getCart = async (userId) => {
-  const cart = await Cart.findOne({ user: userId }).populate("items");
-  if (!cart) return { status: 404, message: "Cart not found" };
-  return { status: 200, data: cart };
-};
 
-// Remove item from cart
-exports.removeCartItem = async (userId, productId) => {
-  const cart = await Cart.findOne({ userId });
-  if (!cart) return { status: 400, message: "cart not found" };
-  const itemIndex = cart.items.findIndex(
-    (item) => item.product.toString() === productId
+// Update Quantity
+const updateItemQuantity = async (userId, product_id, quantity) => {
+  const cart = await Cart.findOne({ user_id: userId });
+
+  if (!cart) throw new Error("Cart not found");
+
+  const item = cart.items.find(
+    (item) => item?.product_id?.toString() === product_id
   );
-  if (itemIndex > -1) {
-    if (cart.items[itemIndex].quantity > 1) {
-      cart.items[itemIndex].quantity -= 1;
-    } else {
-      cart.items.splice(itemIndex, 1);
-    }
+
+  if (item) {
+    item.quantity += quantity;
   } else {
-    return { status: 404, message: "Item not found in the cart" };
+    cart.items.push({ product_id, quantity });
   }
 
-  try {
-    await cart.save();
-
-    return { status: 200, message: "Item added to cart", data: cart };
-  } catch (error) {
-    console.error("Cart Save Error:", error.message);
-    return {
-      status: 500,
-      message: "Internal server error",
-      error: error.message,
-    };
-  }
+  await cart.save();
+  return cart;
 };
+
+// Remove item
+const removeItemFromCart = async (userId, productId) => {
+  const cart = await Cart.findOne({ user_id: userId });
+  if (!cart) throw new Error("Cart not found");
+
+  cart.items = cart.items
+    .map((item) => {
+      if (item.product_id.toString() === productId) {
+        if (item.quantity > 1) {
+          return { ...item, quantity: item.quantity - 1 };
+        }
+
+        return null;
+      }
+      return item;
+    })
+    .filter(Boolean);
+  await cart.save();
+  return cart;
+};
+
+// Clear cart
+const clearUserCart = async (userId) => {
+  const cart = await Cart.findOne({ user_id: userId });
+  if (!cart) throw new Error("Cart not found");
+
+  cart.items = [];
+  await cart.save();
+  return cart;
+};
+
+// Count items
+const getCartItemCount = async (userId) => {
+  const cart = await Cart.findOne({ user_id: userId });
+  return cart ? cart.items.length : 0;
+};
+
+// ✅ EXPORT ALL FUNCTIONS
+module.exports = {
+  getCartByUserId,
+  updateItemQuantity,
+  removeItemFromCart,
+  clearUserCart,
+  getCartItemCount,
+  addItemsToCart,
+};
+
+async function addItemsToCart(userId, items) {
+  // Find existing cart for the user
+  let cart = await Cart.findOne({ user_id: userId });
+
+  if (!cart) {
+    // Create new cart if none exists
+    cart = new Cart({
+      user_id: userId,
+      items: [],
+    });
+  }
+
+  // Merge new items into existing cart
+  for (const newItem of items) {
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.product_id.toString() === newItem.product_id
+    );
+
+    if (existingItemIndex > -1) {
+      // If product exists in cart, update quantity
+      cart.items[existingItemIndex].quantity += newItem.quantity;
+    } else {
+      // Else, push new product item
+      cart.items.push(newItem);
+    }
+  }
+
+  await cart.save();
+  return cart;
+}
