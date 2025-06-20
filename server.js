@@ -19,7 +19,7 @@ app.use(cookieParser());
 // Configure CORS with credentials support
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://zentra-one.vercel.app/",
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   })
