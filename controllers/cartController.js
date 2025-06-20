@@ -1,14 +1,15 @@
 const cartService = require("../services/cartService");
-async function getCart(req, res) {
+
+const getCart = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const cart = await cartService.getCartByUserId(req, res);
+    const userId = req.user?.id;
+    const cart = await cartService.getCartByUserId(userId);
     return res.status(200).json({ success: true, cart });
   } catch (error) {
-    console.error("Get Cart Error:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("Get Cart Error (Controller):", error);
+    return res.status(500).json({ success: false, message: "Server Error" });
   }
-}
+};
 
 async function updateCartItem(req, res) {
   try {

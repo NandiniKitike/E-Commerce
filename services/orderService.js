@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const Product = require("../models/product");
+const Product = require("../models/Product");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const Address = require("../models/Address");
@@ -116,12 +116,26 @@ exports.getOrdersByUserId = async (userId) => {
     throw error;
   }
 };
-
 exports.updateOrderStatus = async (orderId, status) => {
+  if (!status) throw new Error("Status is required");
+
+  const allowedStatuses = [
+    "pending",
+    "processing",
+    "shipped",
+    "out for delivery",
+    "delivered",
+    "cancelled",
+  ];
+
+  if (!allowedStatuses.includes(status.toLowerCase())) {
+    throw new Error("Invalid order status value");
+  }
+
   const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
 
-  order.status = status;
+  order.status = status.toLowerCase(); // ensure lowercase if needed
   await order.save();
 
   return order;

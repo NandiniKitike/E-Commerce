@@ -48,6 +48,5 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Prevent model overwrite error
 module.exports =
   mongoose.models.Product || mongoose.model("Product", productSchema);

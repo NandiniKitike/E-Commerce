@@ -7,8 +7,8 @@ const authMiddleware = require("../Middleware/authMiddleware");
 router.post("/", authMiddleware, orderController.placeOrder);
 // router.get("/getorders", authMiddleware, orderController.getMyOrders);
 router.get("/getallorder", authMiddleware, orderController.getAllOrders); // moved up
-// router.get("/:id/track", authMiddleware, orderController.trackOrder);
-// router.put("/:id/status", authMiddleware, orderController.updateOrderStatus);
+router.get("/:id/track", authMiddleware, orderController.trackOrder);
+router.put("/status/:id", authMiddleware, orderController.updateOrderStatus);
 // router.put("/:id/cancel", authMiddleware, orderController.cancelOrder);
 router.get("/user", authMiddleware, orderController.getOrderById); // moved down
 

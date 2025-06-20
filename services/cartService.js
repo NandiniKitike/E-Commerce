@@ -2,16 +2,17 @@ const Cart = require("../models/Cart");
 
 // Get Cart
 
-const getCartByUserId = async (req, res) => {
+const getCartByUserId = async (userId) => {
   try {
-    const userId = req.user?.id; // should be set by authMiddleware
+    console.log(userId, "userid");
     const cart = await Cart.find({
       user_id: userId,
     }).populate("items.product_id");
-    return res.status(200).json({ success: true, cart });
+
+    return cart;
   } catch (error) {
-    console.error("Get Cart Error:", error);
-    return res.status(500).json({ success: false, message: "Server Error" });
+    console.error("Get Cart Error (Service):", error);
+    throw error;
   }
 };
 

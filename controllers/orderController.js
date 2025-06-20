@@ -66,19 +66,39 @@ exports.getOrderById = async (req, res) => {
 };
 
 // Update order status (admin only)
+// exports.updateOrderStatus = async (req, res) => {
+//   try {
+//     // if (req.user.role !== "admin") {
+//     //   return res.status(403).json({ error: "Unauthorized" });
+//     // }
+
+//     const updated = await orderService.updateOrderStatus(
+//       req.params.id,
+//       req.body.status
+//     );
+//     res.status(200).json({ message: "Order status updated", updated });
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// };
 exports.updateOrderStatus = async (req, res) => {
   try {
-    // if (req.user.role !== "admin") {
-    //   return res.status(403).json({ error: "Unauthorized" });
-    // }
+    const { id } = req.params;
+    const { status } = req.body;
 
-    const updated = await orderService.updateOrderStatus(
-      req.params.id,
-      req.body.status
-    );
-    res.status(200).json({ message: "Order status updated", updated });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const updatedOrder = await orderService.updateOrderStatus(id, status);
+
+    return res.json({
+      success: true,
+      message: "Order status updated",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Status update error:", error.message);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to update order status",
+    });
   }
 };
 
