@@ -9,7 +9,7 @@ const upload = multer({ storage });
 const authMiddleware = require("../Middleware/authMiddleware");
 const roleMiddleware = require("../Middleware/roleMiddleware");
 // Public routes
-router.get("/getAllProducts", productController.getAllProducts);
+router.get("/getAllProducts", authMiddleware, productController.getAllProducts);
 router.get("/getProduct/:id", productController.getProductById);
 // router.get("/check-stock/:productId", productController.getStockStatus);
 // router.put("/update-stock/:id", productController.changeStockQuantity);

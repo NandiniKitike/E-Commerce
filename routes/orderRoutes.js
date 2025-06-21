@@ -3,7 +3,7 @@ const router = express.Router();
 const orderController = require("../controllers/orderController");
 const authMiddleware = require("../Middleware/authMiddleware");
 
-// ✅ Put specific routes before dynamic routes
+//
 router.post("/", authMiddleware, orderController.placeOrder);
 // router.get("/getorders", authMiddleware, orderController.getMyOrders);
 router.get("/getallorder", authMiddleware, orderController.getAllOrders); // moved up
