@@ -22,6 +22,7 @@ exports.registerCustomer = async (req, res) => {
 exports.loginCustomer = async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password) {
       return res
         .status(400)
@@ -33,15 +34,18 @@ exports.loginCustomer = async (req, res) => {
     // Set token in HTTP-only cookie
     res.cookie("token", result.token, {
       httpOnly: true,
-      secure: process.env.JWT_SECRET === "production",
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax", // or "None" if frontend on different domain
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    // Send user data as response
-    return res.status(200).json({ success: true, user: result.user });
-  } catch (err) {
-    return res.status(401).json({ success: false, message: err.message });
+    res.status(200).json({
+      success: true,
+      user: result.user,
+      message: "Login successful",
+    });
+  } catch (error) {
+    res.status(401).json({ success: false, message: error.message });
   }
 };
 

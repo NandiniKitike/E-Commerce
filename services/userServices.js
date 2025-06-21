@@ -277,10 +277,18 @@ async function registerCustomer({ name, email, password }) {
 // Login Customer
 async function loginCustomer({ email, password }) {
   const user = await User.findOne({ email });
-  if (!user || user.password !== password || user.role !== "customer") {
+
+  if (!user || user.role !== "customer") {
     throw new Error("Invalid credentials");
   }
+
+  // Plain text password comparison (NOT SECURE for real applications)
+  if (user.password !== password) {
+    throw new Error("Invalid credentials");
+  }
+
   const token = generateToken(user);
+
   return {
     user: {
       id: user._id,
