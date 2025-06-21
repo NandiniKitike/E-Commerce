@@ -95,6 +95,6 @@ router.get(
   roleMiddleware(["customer"]),
   userControllers.getProfile
 );
-router.get("/auth/me", authMiddleware, userControllers.getCurrentUser);
-router.get("/admin/me", authMiddleware, userControllers.getCurrentAdmin);
+router.get("/auth/me", userControllers.getCurrentUser);
+router.get("/admin/me", userControllers.getCurrentAdmin);
 module.exports = router;
