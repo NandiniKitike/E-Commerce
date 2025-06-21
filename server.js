@@ -19,12 +19,11 @@ app.use(cookieParser());
 // Configure CORS with credentials support
 app.use(
   cors({
-    origin: "https://zentra-one.vercel.app/",
+    origin: ["http://localhost:5173", "https://frontend-ecom-woad.vercel.app/"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
 connectDB();
 // connectCloudinary();
 
