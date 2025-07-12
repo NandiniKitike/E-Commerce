@@ -11,19 +11,19 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
-
-// Add cookie-parser middleware to parse cookies
-app.use(cookieParser());
-
-// Configure CORS with credentials support
+// Middleware
 app.use(
   cors({
     origin: ["http://localhost:5173", "https://frontend-ecom-woad.vercel.app"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
 connectDB();
 // connectCloudinary();
 
