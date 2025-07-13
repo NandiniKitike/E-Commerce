@@ -78,12 +78,21 @@ exports.registerAdmin = async (req, res) => {
     if (!name || !email || !password) {
       return res
         .status(400)
-        .json({ message: "Name, email, and password are required" });
+        .json({
+          success: false,
+          message: "Name, email, and password are required",
+        });
     }
+
     const result = await userServices.registerAdmin({ name, email, password });
-    return res.status(201).json(result);
+
+    return res.status(201).json({
+      success: true, // ✅ ADD THIS
+      user: result.user,
+      token: result.token,
+    });
   } catch (err) {
-    return res.status(400).json({ message: err.message });
+    return res.status(400).json({ success: false, message: err.message });
   }
 };
 
