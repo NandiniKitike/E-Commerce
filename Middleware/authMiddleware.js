@@ -21,10 +21,18 @@
 
 // module.exports = authMiddleware;
 const jwt = require("jsonwebtoken");
-
+const cors = require("cors");
 const authMiddleware = (req, res, next) => {
   const token = req.cookies.token;
 
+  app.use(
+    cors({
+      origin: ["https://frontend-ecom-woad.vercel.app/"], // frontend domain
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    })
+  );
   if (!token) {
     return res
       .status(401)
