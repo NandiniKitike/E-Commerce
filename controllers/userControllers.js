@@ -48,7 +48,30 @@ exports.loginCustomer = async (req, res) => {
     res.status(401).json({ success: false, message: error.message });
   }
 };
+exports.logoutUser = async (req, res) => {
+  try {
+    // Call service to log user out (optional if you want to do DB updates)
+    await userServices.logoutUser(req.user.id);
 
+    // ✅ Clear the cookie
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (err) {
+    console.error("Logout Error:", err.message);
+    res.status(500).json({
+      success: false,
+      message: "Logout failed. Please try again.",
+    });
+  }
+};
 exports.registerAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body;

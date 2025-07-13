@@ -376,6 +376,7 @@ module.exports = {
   logoutAdminWithCookie,
   getAdminById,
   getUserById,
+  logoutUser,
 };
 // //logout admin
 async function logoutAdminWithCookie() {
@@ -388,4 +389,16 @@ async function logoutAdminWithCookie() {
 async function getUserById(userId) {
   // Find user by id excluding password field
   return await User.findById(userId).select("-password");
+}
+async function logoutUser(userId) {
+  try {
+    // Optional: Update user’s session status in DB
+    // Example: set isLoggedIn = false
+    await User.findByIdAndUpdate(userId, { isLoggedIn: false });
+    console.log(`User ${userId} logged out`);
+    return { success: true, message: "User logged out" };
+  } catch (error) {
+    console.error("logoutUser error:", error.message);
+    throw error;
+  }
 }
